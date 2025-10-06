@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  # Serviço de Banco de Dados (MongoDB)
+  db:
+    image: mongo:latest
+    container_name: canvaslite_db
+    # Mapeamento de volume para persistência de dados
+    volumes:
+      - mongo_data:/data/db
+    # Porta interna para comunicação com o backend
+    expose:
+      - "27017"
+    restart: always
+
+  # Serviço de Backend (API Node.js/Express)
+  backend:
+    # Constrói a imagem usando o Dockerfile na pasta ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: canvaslite_backend
+    # Garante que o DB inicie primeiro
+    depends_on:
+      - db
+    environment:
+      # Conexão interna: usa o nome do serviço 'db'
+      - MONGODB_URI=mongodb://db:27017/canvaslite
+      - PORT=5000 
+    # Porta interna para o frontend/nginx acessar
+    expose:
+      - "5000"
+    restart: always
+
+  # Serviço de Frontend (React + Servidor Nginx)
+  frontend:
+    # Constrói a imagem usando o Dockerfile na pasta ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: canvaslite_frontend
+    # Expõe a porta 80 do Nginx. O Dokploy fará o mapeamento externo.
+    ports:
+      - "80:80"
+    # Garante que a API esteja rodando
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  mongo_data:
